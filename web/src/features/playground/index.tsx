@@ -79,7 +79,7 @@ export function Playground() {
     clearMessages()
   }
 
-  const { isLoadingModels, isLoadingPricing, pricingModels } =
+  const { isLoadingModels, isLoadingPricing, pricingModels, groupRatios } =
     usePlaygroundOptions({
       currentGroup: config.group,
       currentModel: config.model,
@@ -173,6 +173,8 @@ export function Playground() {
           models={imageModels}
           groups={groups}
           group={config.group}
+          pricingModels={pricingModels}
+          groupRatios={groupRatios}
           onGroupChange={(value) => updateConfig('group', value)}
         />
       </TabsContent>
@@ -183,6 +185,8 @@ export function Playground() {
           models={videoModels}
           groups={groups}
           group={config.group}
+          pricingModels={pricingModels}
+          groupRatios={groupRatios}
           onGroupChange={(value) => updateConfig('group', value)}
         />
       </TabsContent>

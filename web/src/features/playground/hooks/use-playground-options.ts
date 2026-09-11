@@ -134,5 +134,6 @@ export function usePlaygroundOptions({
     isLoadingModels,
     isLoadingPricing,
     pricingModels: pricingData?.data ?? [],
+    groupRatios: pricingData?.group_ratio ?? {},
   }
 }

@@ -16,7 +16,8 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import i18next from 'i18next'
 import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 
@@ -45,6 +46,14 @@ vi.mock('@/features/playground/hooks', () => ({
 
 const models = [{ label: 'image-model', value: 'image-model' }]
 const groups = [{ label: 'default', value: 'default', ratio: 1 }]
+const pricingProps = {
+  pricingModels: [] as Array<{
+    model_name: string
+    quota_type: number
+    model_price?: number
+  }>,
+  groupRatios: { default: 1 },
+}
 
 describe('MediaPlayground', () => {
   beforeAll(() => {
@@ -93,6 +102,7 @@ describe('MediaPlayground', () => {
         models={[{ label: model, value: model }]}
         groups={groups}
         group='default'
+        {...pricingProps}
         onGroupChange={vi.fn()}
       />
     )
@@ -108,6 +118,7 @@ describe('MediaPlayground', () => {
         models={[]}
         groups={groups}
         group='default'
+        {...pricingProps}
         onGroupChange={vi.fn()}
       />
     )
@@ -125,6 +136,7 @@ describe('MediaPlayground', () => {
         models={models}
         groups={groups}
         group='default'
+        {...pricingProps}
         onGroupChange={vi.fn()}
       />
     )
@@ -136,5 +148,43 @@ describe('MediaPlayground', () => {
       'download',
       'generated-image-1.png'
     )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Generated image 1' }))
+
+    const preview = screen.getByRole('dialog')
+    expect(preview).toBeVisible()
+    expect(
+      within(preview).getByRole('img', { name: 'Generated image 1' })
+    ).toHaveClass('max-w-none')
+  })
+
+  test('updates the generated image price from the configured base price', async () => {
+    const user = userEvent.setup()
+    const model = 'lightx2v/Qwen-Image-2512-Lightning'
+
+    render(
+      <MediaPlayground
+        mode='image'
+        models={[{ label: model, value: model }]}
+        groups={groups}
+        group='default'
+        pricingModels={[
+          { model_name: model, quota_type: 1, model_price: 0.04 },
+        ]}
+        groupRatios={{ default: 1 }}
+        onGroupChange={vi.fn()}
+      />
+    )
+
+    expect(
+      screen.getByRole('button', { name: /Generate.*\$0\.04/ })
+    ).toBeVisible()
+
+    await user.click(screen.getByRole('combobox', { name: 'Size' }))
+    await user.click(screen.getByRole('option', { name: '1328x1328' }))
+
+    expect(
+      screen.getByRole('button', { name: /Generate.*\$0\.0673/ })
+    ).toBeVisible()
   })
 })

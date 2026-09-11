@@ -28,6 +28,7 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
+import { Dialog } from '@/components/dialog'
 import { ModelGroupSelector } from '@/components/model-group-selector'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,10 +67,17 @@ import {
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
 import { Textarea } from '@/components/ui/textarea'
+import type { PricingModel } from '@/features/pricing/types'
+import { formatBillingCurrencyFromUSD } from '@/lib/currency'
 import { getServerErrorMessage } from '@/lib/server-error-message'
 
 import { getGeneratedVideoContentUrl } from '../../api'
-import { getImageSizes, VIDEO_DURATIONS, VIDEO_SIZES } from '../../constants'
+import {
+  getImageAreaRatio,
+  getImageSizes,
+  VIDEO_DURATIONS,
+  VIDEO_SIZES,
+} from '../../constants'
 import { useMediaGeneration } from '../../hooks'
 import {
   mediaFormSchema,
@@ -77,11 +85,18 @@ import {
 } from '../../lib/media/media-form'
 import type { GroupOption, ModelOption, PlaygroundMode } from '../../types'
 
+type ImagePricing = Pick<
+  PricingModel,
+  'model_name' | 'quota_type' | 'model_price'
+>
+
 type MediaPlaygroundProps = {
   mode: Exclude<PlaygroundMode, 'chat'>
   models: ModelOption[]
   groups: GroupOption[]
   group: string
+  pricingModels: ImagePricing[]
+  groupRatios: Record<string, number>
   onGroupChange: (group: string) => void
 }
 
@@ -102,7 +117,21 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
     },
   })
   const selectedModel = form.watch('model')
+  const selectedSize = form.watch('size')
+  const imageCount = form.watch('count')
   const sizes = isImage ? getImageSizes(selectedModel) : VIDEO_SIZES
+  const selectedPricing = props.pricingModels.find(
+    (pricing) => pricing.model_name === selectedModel
+  )
+  const imagePrice =
+    isImage &&
+    selectedPricing?.quota_type === 1 &&
+    typeof selectedPricing.model_price === 'number'
+      ? selectedPricing.model_price *
+        getImageAreaRatio(selectedModel, selectedSize) *
+        imageCount *
+        (props.groupRatios[props.group] ?? 1)
+      : null
 
   useEffect(() => {
     const current = form.getValues('model')
@@ -189,7 +218,7 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                   <MediaSelect
                     id={`${props.mode}-size`}
                     label={t('Size')}
-                    value={form.watch('size')}
+                    value={selectedSize}
                     options={sizes.map((size) => ({
                       label: size,
                       value: size,
@@ -225,6 +254,16 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                   <HugeiconsIcon icon={AiMagicIcon} data-icon='inline-start' />
                 )}
                 {generation.isPending ? t('Generating...') : t('Generate')}
+                {imagePrice !== null && (
+                  <span>
+                    ·{' '}
+                    {formatBillingCurrencyFromUSD(imagePrice, {
+                      abbreviate: false,
+                      digitsLarge: 4,
+                      digitsSmall: 4,
+                    })}
+                  </span>
+                )}
               </Button>
             </CardFooter>
           </form>
@@ -277,13 +316,39 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                       key={source}
                       className='group bg-muted relative overflow-hidden rounded-xl border'
                     >
-                      <img
-                        src={source}
-                        alt={t('Generated image {{number}}', {
+                      <Dialog
+                        title={t('Generated image {{number}}', {
                           number: index + 1,
                         })}
-                        className='aspect-square size-full object-contain'
-                      />
+                        contentClassName='sm:max-w-[calc(100vw-2rem)]'
+                        contentHeight='calc(100vh - 10rem)'
+                        bodyClassName='overflow-auto'
+                        trigger={
+                          <Button
+                            type='button'
+                            variant='ghost'
+                            className='block h-auto w-full rounded-none p-0'
+                          >
+                            <img
+                              src={source}
+                              alt={t('Generated image {{number}}', {
+                                number: index + 1,
+                              })}
+                              className='aspect-square size-full cursor-zoom-in object-contain'
+                            />
+                          </Button>
+                        }
+                      >
+                        <div className='max-h-full max-w-full overflow-auto'>
+                          <img
+                            src={source}
+                            alt={t('Generated image {{number}}', {
+                              number: index + 1,
+                            })}
+                            className='h-auto max-w-none'
+                          />
+                        </div>
+                      </Dialog>
                       <Button
                         variant='secondary'
                         size='sm'

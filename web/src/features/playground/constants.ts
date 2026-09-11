@@ -74,6 +74,17 @@ export function getImageSizes(model: string): readonly string[] {
   return config?.sizes ?? IMAGE_SIZES
 }
 
+export function getImageAreaRatio(model: string, size: string): number {
+  const config = IMAGE_MODEL_CONFIGS[model as keyof typeof IMAGE_MODEL_CONFIGS]
+  if (!config) return 1
+
+  const [width, height] = size.split('x').map(Number)
+  const [baseWidth, baseHeight] = config.defaultSize.split('x').map(Number)
+  if (!width || !height || !baseWidth || !baseHeight) return 1
+
+  return (width * height) / (baseWidth * baseHeight)
+}
+
 export const VIDEO_SIZES = ['1280x720', '720x1280'] as const
 export const VIDEO_DURATIONS = ['5', '10'] as const
 
