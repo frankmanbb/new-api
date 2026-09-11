@@ -239,3 +239,40 @@ func TestGetAndValidOpenAIImageRequestNBounds(t *testing.T) {
 		require.Contains(t, err.Error(), boundErr)
 	})
 }
+
+func TestGetAndValidOpenAIImageRequestQwenImageSizeConstraints(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	const model = "lightx2v/Qwen-Image-2512-Lightning"
+
+	tests := []struct {
+		name     string
+		size     string
+		wantSize string
+		wantErr  string
+	}{
+		{name: "defaults to recommended square size", wantSize: "1328x1328"},
+		{name: "accepts official landscape size", size: "1664x928", wantSize: "1664x928"},
+		{name: "accepts dimension boundaries", size: "256x1664", wantSize: "256x1664"},
+		{name: "rejects dimension below minimum", size: "240x1024", wantErr: "between 256 and 1664"},
+		{name: "rejects dimension above maximum", size: "1680x1024", wantErr: "between 256 and 1664"},
+		{name: "rejects dimension not divisible by sixteen", size: "1000x1024", wantErr: "divisible by 16"},
+		{name: "rejects malformed size", size: "1024", wantErr: "WIDTHxHEIGHT"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			body := fmt.Sprintf(`{"model":%q,"prompt":"a cat","size":%q}`, model, tt.size)
+			c, _ := gin.CreateTestContext(httptest.NewRecorder())
+			c.Request = httptest.NewRequest(http.MethodPost, "/v1/images/generations", bytes.NewBufferString(body))
+			c.Request.Header.Set("Content-Type", "application/json")
+
+			request, err := GetAndValidOpenAIImageRequest(c, relayconstant.RelayModeImagesGenerations)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Equal(t, tt.wantSize, request.Size)
+		})
+	}
+}

@@ -257,7 +257,31 @@ func GetAndValidOpenAIImageRequest(c *gin.Context, relayMode int) (*dto.ImageReq
 		if err := imageRequest.NormalizeLegacyDalleImageRequest(); err != nil {
 			return nil, err
 		}
-		if imageRequest.Model == "gpt-image-1" {
+		if imageRequest.Model == "lightx2v/Qwen-Image-2512-Lightning" {
+			const (
+				minDimension      = 256
+				maxDimension      = 1664
+				dimensionMultiple = 16
+			)
+			if imageRequest.Size == "" {
+				imageRequest.Size = "1328x1328"
+			}
+			widthValue, heightValue, ok := strings.Cut(imageRequest.Size, "x")
+			if !ok {
+				return nil, errors.New("size must use WIDTHxHEIGHT format")
+			}
+			width, widthErr := strconv.Atoi(widthValue)
+			height, heightErr := strconv.Atoi(heightValue)
+			if widthErr != nil || heightErr != nil {
+				return nil, errors.New("size must use WIDTHxHEIGHT format")
+			}
+			if width < minDimension || width > maxDimension || height < minDimension || height > maxDimension {
+				return nil, fmt.Errorf("image width and height must each be between %d and %d", minDimension, maxDimension)
+			}
+			if width%dimensionMultiple != 0 || height%dimensionMultiple != 0 {
+				return nil, fmt.Errorf("image width and height must each be divisible by %d", dimensionMultiple)
+			}
+		} else if imageRequest.Model == "gpt-image-1" {
 			if imageRequest.Quality == "" {
 				imageRequest.Quality = "auto"
 			}

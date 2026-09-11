@@ -20,6 +20,7 @@ import { render, screen } from '@testing-library/react'
 import i18next from 'i18next'
 import { beforeAll, beforeEach, describe, expect, test, vi } from 'vitest'
 
+import { getImageSizes, IMAGE_MODEL_CONFIGS } from '../../../constants'
 import { MediaPlayground } from '../media-playground'
 
 const submit = vi.fn()
@@ -65,6 +66,21 @@ describe('MediaPlayground', () => {
       taskId: '',
       video: undefined,
     }
+  })
+
+  test('uses the official Qwen Image 2512 recommended resolutions', () => {
+    const model = 'lightx2v/Qwen-Image-2512-Lightning'
+
+    expect(getImageSizes(model)).toEqual(
+      IMAGE_MODEL_CONFIGS[model].recommendedSizes
+    )
+    expect(IMAGE_MODEL_CONFIGS[model]).toMatchObject({
+      minWidth: 256,
+      minHeight: 256,
+      maxWidth: 1664,
+      maxHeight: 1664,
+      dimensionMultiple: 16,
+    })
   })
 
   test('disables generation when no compatible model is available', () => {

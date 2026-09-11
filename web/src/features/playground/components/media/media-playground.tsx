@@ -69,7 +69,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { getServerErrorMessage } from '@/lib/server-error-message'
 
 import { getGeneratedVideoContentUrl } from '../../api'
-import { IMAGE_SIZES, VIDEO_DURATIONS, VIDEO_SIZES } from '../../constants'
+import { getImageSizes, VIDEO_DURATIONS, VIDEO_SIZES } from '../../constants'
 import { useMediaGeneration } from '../../hooks'
 import {
   mediaFormSchema,
@@ -89,19 +89,21 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
   const { t } = useTranslation()
   const generation = useMediaGeneration(props.mode)
   const isImage = props.mode === 'image'
-  const sizes = isImage ? IMAGE_SIZES : VIDEO_SIZES
+  const initialModel = props.models[0]?.value ?? ''
   const form = useForm<MediaFormValues>({
     resolver: zodResolver(mediaFormSchema),
     defaultValues: {
       prompt: '',
-      model: props.models[0]?.value ?? '',
+      model: initialModel,
       group: props.group,
-      size: sizes[0],
+      size: isImage ? getImageSizes(initialModel)[0] : VIDEO_SIZES[0],
       quality: 'standard',
       count: 1,
       duration: VIDEO_DURATIONS[0],
     },
   })
+  const selectedModel = form.watch('model')
+  const sizes = isImage ? getImageSizes(selectedModel) : VIDEO_SIZES
 
   useEffect(() => {
     const current = form.getValues('model')
@@ -113,6 +115,13 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
   useEffect(() => {
     form.setValue('group', props.group)
   }, [form, props.group])
+
+  useEffect(() => {
+    const current = form.getValues('size')
+    if (!sizes.some((size) => size === current)) {
+      form.setValue('size', sizes[0])
+    }
+  }, [form, sizes])
 
   let error = ''
   if (generation.error) {
@@ -158,7 +167,7 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                 <Field>
                   <FieldLabel>{t('Model and group')}</FieldLabel>
                   <ModelGroupSelector
-                    selectedModel={form.watch('model')}
+                    selectedModel={selectedModel}
                     models={props.models}
                     onModelChange={(value) => form.setValue('model', value)}
                     selectedGroup={props.group}
