@@ -16,8 +16,20 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
+import {
+  BubbleChatIcon,
+  Image01Icon,
+  Video01Icon,
+} from '@hugeicons/core-free-icons'
+import { HugeiconsIcon } from '@hugeicons/react'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+
 import { PlaygroundChat } from './components/chat/playground-chat'
 import { PlaygroundInput } from './components/input/playground-input'
+import { MediaPlayground } from './components/media/media-playground'
 import {
   useChatHandler,
   usePlaygroundConversation,
@@ -26,6 +38,7 @@ import {
 } from './hooks'
 
 export function Playground() {
+  const { t } = useTranslation()
   const {
     config,
     parameterEnabled,
@@ -66,55 +79,118 @@ export function Playground() {
     clearMessages()
   }
 
-  const { isLoadingModels } = usePlaygroundOptions({
-    currentGroup: config.group,
-    currentModel: config.model,
-    setGroups,
-    setModels,
-    updateConfig,
-  })
+  const { isLoadingModels, isLoadingPricing, pricingModels } =
+    usePlaygroundOptions({
+      currentGroup: config.group,
+      currentModel: config.model,
+      setGroups,
+      setModels,
+      updateConfig,
+    })
+
+  const imageModels = useMemo(
+    () =>
+      models.filter((option) =>
+        pricingModels
+          .find((pricing) => pricing.model_name === option.value)
+          ?.supported_endpoint_types?.includes('image-generation')
+      ),
+    [models, pricingModels]
+  )
+  const videoModels = useMemo(
+    () =>
+      models.filter((option) =>
+        pricingModels
+          .find((pricing) => pricing.model_name === option.value)
+          ?.supported_endpoint_types?.includes('openai-video')
+      ),
+    [models, pricingModels]
+  )
 
   return (
-    <div className='relative flex size-full min-h-0 flex-col overflow-hidden'>
-      {/* Full-width scroll container: scrolling works even over side whitespace */}
-      <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
-        <PlaygroundChat
-          messages={messages}
-          isLoadingMessages={isLoadingMessages}
-          onRegenerateMessage={handleRegenerateMessage}
-          onEditMessage={handleEditMessage}
-          onDeleteMessage={handleDeleteMessage}
-          onSelectPrompt={handleSendMessage}
-          isGenerating={isGenerating}
-          editingKey={editingMessageKey}
-          onCancelEdit={handleEditOpenChange}
-          onSaveEdit={(newContent) => applyEdit(newContent, false)}
-          onSaveEditAndSubmit={(newContent) => applyEdit(newContent, true)}
-        />
+    <Tabs defaultValue='chat' className='size-full min-h-0 gap-0'>
+      <div className='border-border/70 flex shrink-0 justify-center border-b px-4 py-3'>
+        <TabsList aria-label={t('Playground mode')}>
+          <TabsTrigger value='chat'>
+            <HugeiconsIcon icon={BubbleChatIcon} data-icon='inline-start' />
+            {t('Chat')}
+          </TabsTrigger>
+          <TabsTrigger value='image'>
+            <HugeiconsIcon icon={Image01Icon} data-icon='inline-start' />
+            {t('Image')}
+          </TabsTrigger>
+          <TabsTrigger value='video'>
+            <HugeiconsIcon icon={Video01Icon} data-icon='inline-start' />
+            {t('Video')}
+          </TabsTrigger>
+        </TabsList>
       </div>
 
-      {/* Input area: center content and constrain to the same container width */}
-      <div className='mx-auto w-full max-w-4xl'>
-        <PlaygroundInput
-          config={config}
-          disabled={isGenerating}
+      <TabsContent value='chat' className='min-h-0 overflow-hidden'>
+        <div className='relative flex size-full min-h-0 flex-col overflow-hidden'>
+          <div className='flex min-h-0 flex-1 flex-col overflow-hidden'>
+            <PlaygroundChat
+              messages={messages}
+              isLoadingMessages={isLoadingMessages}
+              onRegenerateMessage={handleRegenerateMessage}
+              onEditMessage={handleEditMessage}
+              onDeleteMessage={handleDeleteMessage}
+              onSelectPrompt={handleSendMessage}
+              isGenerating={isGenerating}
+              editingKey={editingMessageKey}
+              onCancelEdit={handleEditOpenChange}
+              onSaveEdit={(newContent) => applyEdit(newContent, false)}
+              onSaveEditAndSubmit={(newContent) => applyEdit(newContent, true)}
+            />
+          </div>
+          <div className='mx-auto w-full max-w-4xl'>
+            <PlaygroundInput
+              config={config}
+              disabled={isGenerating}
+              groups={groups}
+              groupValue={config.group}
+              isGenerating={isGenerating}
+              isModelLoading={isLoadingModels}
+              modelValue={config.model}
+              models={models}
+              onGroupChange={(value) => updateConfig('group', value)}
+              onConfigChange={updateConfig}
+              onClearMessages={handleClearMessages}
+              onModelChange={(value) => updateConfig('model', value)}
+              onParameterEnabledChange={updateParameterEnabled}
+              onStop={stopGeneration}
+              onSubmit={handleSendMessage}
+              parameterEnabled={parameterEnabled}
+              hasMessages={messages.length > 0}
+            />
+          </div>
+        </div>
+      </TabsContent>
+
+      <TabsContent value='image' className='min-h-0 overflow-hidden'>
+        <MediaPlayground
+          mode='image'
+          models={imageModels}
           groups={groups}
-          groupValue={config.group}
-          isGenerating={isGenerating}
-          isModelLoading={isLoadingModels}
-          modelValue={config.model}
-          models={models}
+          group={config.group}
           onGroupChange={(value) => updateConfig('group', value)}
-          onConfigChange={updateConfig}
-          onClearMessages={handleClearMessages}
-          onModelChange={(value) => updateConfig('model', value)}
-          onParameterEnabledChange={updateParameterEnabled}
-          onStop={stopGeneration}
-          onSubmit={handleSendMessage}
-          parameterEnabled={parameterEnabled}
-          hasMessages={messages.length > 0}
         />
-      </div>
-    </div>
+      </TabsContent>
+
+      <TabsContent value='video' className='min-h-0 overflow-hidden'>
+        <MediaPlayground
+          mode='video'
+          models={videoModels}
+          groups={groups}
+          group={config.group}
+          onGroupChange={(value) => updateConfig('group', value)}
+        />
+      </TabsContent>
+      {(isLoadingModels || isLoadingPricing) && (
+        <span className='sr-only' role='status'>
+          {t('Loading models...')}
+        </span>
+      )}
+    </Tabs>
   )
 }

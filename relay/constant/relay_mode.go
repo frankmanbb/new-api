@@ -52,8 +52,11 @@ const (
 )
 
 func Path2RelayMode(path string) int {
+	if after, ok := strings.CutPrefix(path, "/pg/"); ok {
+		path = "/v1/" + after
+	}
 	relayMode := RelayModeUnknown
-	if strings.HasPrefix(path, "/v1/chat/completions") || strings.HasPrefix(path, "/pg/chat/completions") {
+	if strings.HasPrefix(path, "/v1/chat/completions") {
 		relayMode = RelayModeChatCompletions
 	} else if strings.HasPrefix(path, "/v1/completions") {
 		relayMode = RelayModeCompletions

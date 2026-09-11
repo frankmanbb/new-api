@@ -317,6 +317,7 @@ func PrepareTaskPluginRoute() gin.HandlerFunc {
 // through so the existing endpoint remains responsible for its validation.
 func PinTaskPluginEndpoint() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		requestPath := channelSelectionRequestPath(c.Request.URL.Path)
 		generation := pluginruntime.DefaultRegistry.Generation()
 		if generation == nil {
 			c.Next()
@@ -325,7 +326,7 @@ func PinTaskPluginEndpoint() gin.HandlerFunc {
 
 		modelRequest, err := getModelFromRequest(c)
 		if err != nil {
-			if _, _, protocolPath := pluginruntime.LookupHostProtocolOperation(c.Request.Method, c.Request.URL.Path); protocolPath {
+			if _, _, protocolPath := pluginruntime.LookupHostProtocolOperation(c.Request.Method, requestPath); protocolPath {
 				abortWithOpenAiMessage(c, http.StatusBadRequest, "Invalid task protocol request")
 				return
 			}
@@ -361,7 +362,7 @@ func PinTaskPluginEndpoint() gin.HandlerFunc {
 				rewriteTo = target.Alias
 			}
 		}
-		binding, found := generation.LookupEndpoint(c.Request.Method, c.Request.URL.Path, lookupModel)
+		binding, found := generation.LookupEndpoint(c.Request.Method, requestPath, lookupModel)
 		if !found || binding.Plugin == nil {
 			c.Set(contextKeyTaskPluginEndpointModel, *modelRequest)
 			c.Next()
@@ -375,7 +376,7 @@ func PinTaskPluginEndpoint() gin.HandlerFunc {
 		}
 		modelRequest.Model = pinModel
 		c.Set(contextKeyTaskPluginEndpointModel, *modelRequest)
-		candidates := generation.LookupEndpointCandidates(c.Request.Method, c.Request.URL.Path, lookupModel)
+		candidates := generation.LookupEndpointCandidates(c.Request.Method, requestPath, lookupModel)
 		if len(candidates) == 0 {
 			candidates = []pluginruntime.ProtocolBinding{binding}
 		}
@@ -736,7 +737,7 @@ func PrepareTaskPluginEndpoint() gin.HandlerFunc {
 
 func buildTaskPluginRouteRequest(c *gin.Context) (pluginruntime.RouteRequestContext, error) {
 	requestContext := pluginruntime.RouteRequestContext{
-		Path:   c.Request.URL.Path,
+		Path:   channelSelectionRequestPath(c.Request.URL.Path),
 		Method: c.Request.Method,
 		Params: make(map[string]string, len(c.Params)),
 		Query:  make(map[string][]string),

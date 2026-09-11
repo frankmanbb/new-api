@@ -23,8 +23,12 @@ import { API_ENDPOINTS } from './constants'
 import type {
   ChatCompletionRequest,
   ChatCompletionResponse,
+  ImageGenerationRequest,
+  ImageGenerationResponse,
   ModelOption,
   GroupOption,
+  VideoGenerationRequest,
+  VideoGenerationResponse,
 } from './types'
 
 /**
@@ -39,6 +43,38 @@ export async function sendChatCompletion(
     skipErrorHandler: true,
   } as Record<string, unknown>)
   return res.data
+}
+
+export async function generateImage(
+  payload: ImageGenerationRequest
+): Promise<ImageGenerationResponse> {
+  const response = await api.post(API_ENDPOINTS.IMAGE_GENERATIONS, payload, {
+    skipErrorHandler: true,
+  } as Record<string, unknown>)
+  return response.data
+}
+
+export async function generateVideo(
+  payload: VideoGenerationRequest
+): Promise<VideoGenerationResponse> {
+  const response = await api.post(API_ENDPOINTS.VIDEO_GENERATIONS, payload, {
+    skipErrorHandler: true,
+  } as Record<string, unknown>)
+  return response.data
+}
+
+export async function getGeneratedVideo(
+  taskId: string
+): Promise<VideoGenerationResponse> {
+  const response = await api.get(
+    `${API_ENDPOINTS.VIDEO_GENERATIONS}/${encodeURIComponent(taskId)}`,
+    { skipErrorHandler: true } as Record<string, unknown>
+  )
+  return response.data
+}
+
+export function getGeneratedVideoContentUrl(taskId: string): string {
+  return `${API_ENDPOINTS.VIDEO_GENERATIONS}/${encodeURIComponent(taskId)}/content`
 }
 
 /**

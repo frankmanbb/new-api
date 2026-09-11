@@ -396,7 +396,11 @@ func (a *Adaptor) resolve(c *gin.Context, info *relaycommon.RelayInfo) error {
 
 func incomingRequestPath(c *gin.Context, info *relaycommon.RelayInfo) string {
 	if c != nil && c.Request != nil && c.Request.URL != nil {
-		return c.Request.URL.Path
+		path := c.Request.URL.Path
+		if strings.HasPrefix(path, "/pg/") {
+			return "/v1/" + strings.TrimPrefix(path, "/pg/")
+		}
+		return path
 	}
 	if info == nil {
 		return ""

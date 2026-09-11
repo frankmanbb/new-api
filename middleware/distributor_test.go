@@ -179,6 +179,23 @@ func TestTokenModelLimitAllowsExemptAtNameByFullName(t *testing.T) {
 	assert.False(t, tokenModelLimitAllows(baseOnly, "opaque@sha256:deadbeef"))
 }
 
+func TestChannelSelectionRequestPathNormalizesPlaygroundRoute(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "playground chat", path: "/pg/chat/completions", want: "/v1/chat/completions"},
+		{name: "regular relay", path: "/v1/responses", want: "/v1/responses"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, channelSelectionRequestPath(tt.path))
+		})
+	}
+}
+
 func TestNoAvailableChannelMessageNamesClaimingTaskPlugin(t *testing.T) {
 	require.NoError(t, i18n.Init())
 	registry := jsplugin.NewRegistry()

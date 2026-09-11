@@ -16,10 +16,28 @@ along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 For commercial licensing, please contact support@quantumnous.com
 */
-export * from './use-playground-state'
-export * from './use-stream-request'
-export * from './use-chat-handler'
-export * from './use-message-action-guard'
-export * from './use-playground-conversation'
-export * from './use-playground-options'
-export * from './use-media-generation'
+import { z } from 'zod'
+
+export const mediaFormSchema = z.object({
+  prompt: z.string().trim().min(1),
+  model: z.string().min(1),
+  group: z.string().min(1),
+  size: z.string().min(1),
+  quality: z.string(),
+  count: z.number().int().min(1).max(4),
+  duration: z.string(),
+})
+
+export type MediaFormValues = z.infer<typeof mediaFormSchema>
+
+export function imageSource(item: { b64_json?: string; url?: string }): string {
+  if (item.b64_json) return `data:image/png;base64,${item.b64_json}`
+  return item.url ?? ''
+}
+
+export function videoTaskId(response: {
+  id?: string
+  task_id?: string
+}): string {
+  return response.id ?? response.task_id ?? ''
+}

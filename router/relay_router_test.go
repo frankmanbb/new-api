@@ -89,6 +89,26 @@ func TestListModelsSupportsOpenAIAndGeminiAuthentication(t *testing.T) {
 	}
 }
 
+func TestRelayRouterRegistersPlaygroundMediaRoutes(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	engine := gin.New()
+	SetRelayRouter(engine)
+
+	routes := make(map[string]struct{})
+	for _, route := range engine.Routes() {
+		routes[route.Method+" "+route.Path] = struct{}{}
+	}
+
+	for _, route := range []string{
+		"POST /pg/images/generations",
+		"POST /pg/videos",
+		"GET /pg/videos/:task_id",
+		"GET /pg/videos/:task_id/content",
+	} {
+		assert.Contains(t, routes, route)
+	}
+}
+
 func setupRelayRouterTestDB(t *testing.T) {
 	t.Helper()
 
