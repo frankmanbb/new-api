@@ -50,12 +50,14 @@ export const IMAGE_SIZES = [
 
 export const IMAGE_MODEL_CONFIGS = {
   'lightx2v/Qwen-Image-2512-Lightning': {
+    defaultSize: '1024x1024',
     minWidth: 256,
     minHeight: 256,
     maxWidth: 1664,
     maxHeight: 1664,
     dimensionMultiple: 16,
-    recommendedSizes: [
+    sizes: [
+      '1024x1024',
       '1328x1328',
       '1664x928',
       '928x1664',
@@ -68,10 +70,8 @@ export const IMAGE_MODEL_CONFIGS = {
 } as const
 
 export function getImageSizes(model: string): readonly string[] {
-  return (
-    IMAGE_MODEL_CONFIGS[model as keyof typeof IMAGE_MODEL_CONFIGS]
-      ?.recommendedSizes ?? IMAGE_SIZES
-  )
+  const config = IMAGE_MODEL_CONFIGS[model as keyof typeof IMAGE_MODEL_CONFIGS]
+  return config?.sizes ?? IMAGE_SIZES
 }
 
 export const VIDEO_SIZES = ['1280x720', '720x1280'] as const

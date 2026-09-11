@@ -264,7 +264,7 @@ func GetAndValidOpenAIImageRequest(c *gin.Context, relayMode int) (*dto.ImageReq
 				dimensionMultiple = 16
 			)
 			if imageRequest.Size == "" {
-				imageRequest.Size = "1328x1328"
+				imageRequest.Size = "1024x1024"
 			}
 			widthValue, heightValue, ok := strings.Cut(imageRequest.Size, "x")
 			if !ok {

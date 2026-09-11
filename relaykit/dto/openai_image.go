@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"reflect"
+	"strconv"
+	"strings"
 
 	kitutil "github.com/QuantumNous/new-api/relaykit/relayconvert/kitutil"
 	"github.com/QuantumNous/new-api/relaykit/types"
@@ -160,6 +162,20 @@ func indexComma(s string) int {
 }
 
 func (i *ImageRequest) GetTokenCountMeta() *types.TokenCountMeta {
+	imagePriceRatio := i.legacyDallePriceRatio()
+	if i.Model == "lightx2v/Qwen-Image-2512-Lightning" {
+		widthValue, heightValue, ok := strings.Cut(i.Size, "x")
+		if ok {
+			width, widthErr := strconv.Atoi(widthValue)
+			height, heightErr := strconv.Atoi(heightValue)
+			if widthErr == nil && heightErr == nil &&
+				width >= 256 && width <= 1664 && height >= 256 && height <= 1664 &&
+				width%16 == 0 && height%16 == 0 {
+				imagePriceRatio = float64(width) * float64(height) / (1024 * 1024)
+			}
+		}
+	}
+
 	imageN := uint(1)
 	if i.N != nil && *i.N > 0 {
 		imageN = *i.N
@@ -171,7 +187,7 @@ func (i *ImageRequest) GetTokenCountMeta() *types.TokenCountMeta {
 	return &types.TokenCountMeta{
 		CombineText:     i.Prompt,
 		MaxTokens:       1584,
-		ImagePriceRatio: i.legacyDallePriceRatio(),
+		ImagePriceRatio: imagePriceRatio,
 		BillingRatios:   map[string]float64{"n": float64(imageN)},
 	}
 }

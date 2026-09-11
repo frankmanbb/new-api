@@ -307,3 +307,22 @@ func TestGeneralOpenAIRequestPreserveMessageLevelTools(t *testing.T) {
 	assert.Contains(t, meta.CombineText, "Get the current time of a city")
 	assert.Contains(t, meta.CombineText, "lookup_order")
 }
+
+func TestQwenImagePriceRatioUses1024SquareArea(t *testing.T) {
+	tests := []struct {
+		name string
+		size string
+		want float64
+	}{
+		{name: "base size", size: "1024x1024", want: 1},
+		{name: "half dimensions", size: "512x512", want: 0.25},
+		{name: "recommended landscape", size: "1664x928", want: float64(1664*928) / (1024 * 1024)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			request := ImageRequest{Model: "lightx2v/Qwen-Image-2512-Lightning", Size: tt.size}
+			assert.InDelta(t, tt.want, request.GetTokenCountMeta().ImagePriceRatio, 1e-12)
+		})
+	}
+}

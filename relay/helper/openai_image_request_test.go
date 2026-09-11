@@ -250,7 +250,7 @@ func TestGetAndValidOpenAIImageRequestQwenImageSizeConstraints(t *testing.T) {
 		wantSize string
 		wantErr  string
 	}{
-		{name: "defaults to recommended square size", wantSize: "1328x1328"},
+		{name: "defaults to requested square size", wantSize: "1024x1024"},
 		{name: "accepts official landscape size", size: "1664x928", wantSize: "1664x928"},
 		{name: "accepts dimension boundaries", size: "256x1664", wantSize: "256x1664"},
 		{name: "rejects dimension below minimum", size: "240x1024", wantErr: "between 256 and 1664"},

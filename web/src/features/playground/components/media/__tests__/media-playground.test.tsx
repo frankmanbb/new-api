@@ -68,13 +68,12 @@ describe('MediaPlayground', () => {
     }
   })
 
-  test('uses the official Qwen Image 2512 recommended resolutions', () => {
+  test('uses the configured Qwen Image 2512 resolutions', () => {
     const model = 'lightx2v/Qwen-Image-2512-Lightning'
 
-    expect(getImageSizes(model)).toEqual(
-      IMAGE_MODEL_CONFIGS[model].recommendedSizes
-    )
+    expect(getImageSizes(model)).toEqual(IMAGE_MODEL_CONFIGS[model].sizes)
     expect(IMAGE_MODEL_CONFIGS[model]).toMatchObject({
+      defaultSize: '1024x1024',
       minWidth: 256,
       minHeight: 256,
       maxWidth: 1664,
