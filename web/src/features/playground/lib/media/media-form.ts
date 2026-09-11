@@ -23,7 +23,6 @@ export const mediaFormSchema = z.object({
   model: z.string().min(1),
   group: z.string().min(1),
   size: z.string().min(1),
-  quality: z.string(),
   count: z.number().int().min(1).max(4),
   duration: z.string(),
 })

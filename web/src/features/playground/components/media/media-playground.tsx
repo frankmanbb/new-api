@@ -97,7 +97,6 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
       model: initialModel,
       group: props.group,
       size: isImage ? getImageSizes(initialModel)[0] : VIDEO_SIZES[0],
-      quality: 'standard',
       count: 1,
       duration: VIDEO_DURATIONS[0],
     },
@@ -182,7 +181,11 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                   )}
                 </Field>
 
-                <div className='grid gap-4 sm:grid-cols-2'>
+                <div
+                  className={
+                    isImage ? 'grid gap-4' : 'grid gap-4 sm:grid-cols-2'
+                  }
+                >
                   <MediaSelect
                     id={`${props.mode}-size`}
                     label={t('Size')}
@@ -193,18 +196,7 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
                     }))}
                     onChange={(value) => form.setValue('size', value)}
                   />
-                  {isImage ? (
-                    <MediaSelect
-                      id='image-quality'
-                      label={t('Quality')}
-                      value={form.watch('quality')}
-                      options={[
-                        { label: t('Standard'), value: 'standard' },
-                        { label: 'HD', value: 'hd' },
-                      ]}
-                      onChange={(value) => form.setValue('quality', value)}
-                    />
-                  ) : (
+                  {!isImage && (
                     <MediaSelect
                       id='video-duration'
                       label={t('Duration')}

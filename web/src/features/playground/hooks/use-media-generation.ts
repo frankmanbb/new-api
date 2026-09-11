@@ -41,7 +41,6 @@ export function useMediaGeneration(mode: Exclude<PlaygroundMode, 'chat'>) {
         prompt: values.prompt,
         n: values.count,
         size: values.size,
-        quality: values.quality,
         response_format: 'b64_json',
       }),
     onSuccess: (response) => {

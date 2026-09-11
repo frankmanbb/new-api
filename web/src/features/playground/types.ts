@@ -123,7 +123,6 @@ export interface ImageGenerationRequest {
   prompt: string
   n: number
   size: string
-  quality: string
   response_format: 'b64_json'
 }
 

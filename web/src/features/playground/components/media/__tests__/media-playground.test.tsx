@@ -53,6 +53,8 @@ describe('MediaPlayground', () => {
       'No compatible models are available':
         'No compatible models are available',
       Generate: 'Generate',
+      Size: 'Size',
+      Quality: 'Quality',
       'Generated image {{number}}': 'Generated image {{number}}',
     })
   })
@@ -80,6 +82,23 @@ describe('MediaPlayground', () => {
       maxHeight: 1664,
       dimensionMultiple: 16,
     })
+  })
+
+  test('defaults Qwen image generation to 1024 square without quality', () => {
+    const model = 'lightx2v/Qwen-Image-2512-Lightning'
+
+    render(
+      <MediaPlayground
+        mode='image'
+        models={[{ label: model, value: model }]}
+        groups={groups}
+        group='default'
+        onGroupChange={vi.fn()}
+      />
+    )
+
+    expect(screen.getByLabelText('Size')).toHaveTextContent('1024x1024')
+    expect(screen.queryByText('Quality')).not.toBeInTheDocument()
   })
 
   test('disables generation when no compatible model is available', () => {
