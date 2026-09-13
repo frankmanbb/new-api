@@ -28,7 +28,6 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 
-import { Dialog } from '@/components/dialog'
 import { ModelGroupSelector } from '@/components/model-group-selector'
 import { Button } from '@/components/ui/button'
 import {
@@ -66,6 +65,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Spinner } from '@/components/ui/spinner'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import type { PricingModel } from '@/features/pricing/types'
 import { formatBillingCurrencyFromUSD } from '@/lib/currency'
@@ -84,6 +84,8 @@ import {
   type MediaFormValues,
 } from '../../lib/media/media-form'
 import type { GroupOption, ModelOption, PlaygroundMode } from '../../types'
+import { ImageApiTab } from './image-api-tab'
+import { ImagePreviewDialog } from './image-preview-dialog'
 
 type ImagePricing = Pick<
   PricingModel,
@@ -165,246 +167,237 @@ export function MediaPlayground(props: MediaPlaygroundProps) {
     ? t('Turn a prompt into images and compare formats in one place.')
     : t('Create a video, follow its progress, and preview the result.')
 
-  return (
-    <div className='min-h-0 flex-1 overflow-y-auto p-4 md:p-6'>
-      <div className='mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]'>
-        <Card className='h-fit'>
-          <CardHeader>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription>{description}</CardDescription>
-          </CardHeader>
-          <form onSubmit={form.handleSubmit(generation.submit)}>
-            <CardContent>
-              <FieldGroup>
-                <Field>
-                  <FieldLabel htmlFor={`${props.mode}-prompt`}>
-                    {t('Prompt')}
-                  </FieldLabel>
-                  <Textarea
-                    id={`${props.mode}-prompt`}
-                    className='min-h-36 resize-y'
-                    placeholder={t('Describe what you want to create...')}
-                    aria-invalid={Boolean(form.formState.errors.prompt)}
-                    {...form.register('prompt')}
-                  />
-                  {form.formState.errors.prompt && (
-                    <FieldError>{t('Enter a prompt to continue')}</FieldError>
-                  )}
-                </Field>
+  const playgroundContent = (
+    <div className='mx-auto grid w-full max-w-7xl gap-5 lg:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.22fr)]'>
+      <Card className='h-fit'>
+        <CardHeader>
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </CardHeader>
+        <form onSubmit={form.handleSubmit(generation.submit)}>
+          <CardContent>
+            <FieldGroup>
+              <Field>
+                <FieldLabel htmlFor={`${props.mode}-prompt`}>
+                  {t('Prompt')}
+                </FieldLabel>
+                <Textarea
+                  id={`${props.mode}-prompt`}
+                  className='min-h-36 resize-y'
+                  placeholder={t('Describe what you want to create...')}
+                  aria-invalid={Boolean(form.formState.errors.prompt)}
+                  {...form.register('prompt')}
+                />
+                {form.formState.errors.prompt && (
+                  <FieldError>{t('Enter a prompt to continue')}</FieldError>
+                )}
+              </Field>
 
-                <Field>
-                  <FieldLabel>{t('Model and group')}</FieldLabel>
-                  <ModelGroupSelector
-                    selectedModel={selectedModel}
-                    models={props.models}
-                    onModelChange={(value) => form.setValue('model', value)}
-                    selectedGroup={props.group}
-                    groups={props.groups}
-                    onGroupChange={props.onGroupChange}
-                    disabled={generation.isPending}
-                  />
-                  {props.models.length === 0 && (
-                    <FieldError>
-                      {t('No compatible models are available')}
-                    </FieldError>
-                  )}
-                </Field>
+              <Field>
+                <FieldLabel>{t('Model and group')}</FieldLabel>
+                <ModelGroupSelector
+                  selectedModel={selectedModel}
+                  models={props.models}
+                  onModelChange={(value) => form.setValue('model', value)}
+                  selectedGroup={props.group}
+                  groups={props.groups}
+                  onGroupChange={props.onGroupChange}
+                  disabled={generation.isPending}
+                />
+                {props.models.length === 0 && (
+                  <FieldError>
+                    {t('No compatible models are available')}
+                  </FieldError>
+                )}
+              </Field>
 
-                <div
-                  className={
-                    isImage ? 'grid gap-4' : 'grid gap-4 sm:grid-cols-2'
-                  }
-                >
-                  <MediaSelect
-                    id={`${props.mode}-size`}
-                    label={t('Size')}
-                    value={selectedSize}
-                    options={sizes.map((size) => ({
-                      label: size,
-                      value: size,
-                    }))}
-                    onChange={(value) => form.setValue('size', value)}
-                  />
-                  {!isImage && (
-                    <MediaSelect
-                      id='video-duration'
-                      label={t('Duration')}
-                      value={form.watch('duration')}
-                      options={VIDEO_DURATIONS.map((duration) => ({
-                        label: t('{{seconds}} seconds', { seconds: duration }),
-                        value: duration,
-                      }))}
-                      onChange={(value) => form.setValue('duration', value)}
-                    />
-                  )}
-                </div>
-              </FieldGroup>
-            </CardContent>
-            <CardFooter className='mt-4 justify-between gap-3'>
-              <span className='text-muted-foreground text-xs'>
-                {isImage ? t('OpenAI image API') : t('OpenAI video API')}
-              </span>
-              <Button
-                type='submit'
-                disabled={generation.isPending || props.models.length === 0}
+              <div
+                className={isImage ? 'grid gap-4' : 'grid gap-4 sm:grid-cols-2'}
               >
-                {generation.isPending ? (
-                  <Spinner data-icon='inline-start' />
-                ) : (
-                  <HugeiconsIcon icon={AiMagicIcon} data-icon='inline-start' />
+                <MediaSelect
+                  id={`${props.mode}-size`}
+                  label={t('Size')}
+                  value={selectedSize}
+                  options={sizes.map((size) => ({
+                    label: size,
+                    value: size,
+                  }))}
+                  onChange={(value) => form.setValue('size', value)}
+                />
+                {!isImage && (
+                  <MediaSelect
+                    id='video-duration'
+                    label={t('Duration')}
+                    value={form.watch('duration')}
+                    options={VIDEO_DURATIONS.map((duration) => ({
+                      label: t('{{seconds}} seconds', { seconds: duration }),
+                      value: duration,
+                    }))}
+                    onChange={(value) => form.setValue('duration', value)}
+                  />
                 )}
-                {generation.isPending ? t('Generating...') : t('Generate')}
-                {imagePrice !== null && (
-                  <span>
-                    ·{' '}
-                    {formatBillingCurrencyFromUSD(imagePrice, {
-                      abbreviate: false,
-                      digitsLarge: 4,
-                      digitsSmall: 4,
-                    })}
-                  </span>
-                )}
-              </Button>
-            </CardFooter>
-          </form>
-        </Card>
+              </div>
+            </FieldGroup>
+          </CardContent>
+          <CardFooter className='mt-4 justify-between gap-3'>
+            <span className='text-muted-foreground text-xs'>
+              {isImage ? t('OpenAI image API') : t('OpenAI video API')}
+            </span>
+            <Button
+              type='submit'
+              disabled={generation.isPending || props.models.length === 0}
+            >
+              {generation.isPending ? (
+                <Spinner data-icon='inline-start' />
+              ) : (
+                <HugeiconsIcon icon={AiMagicIcon} data-icon='inline-start' />
+              )}
+              {generation.isPending ? t('Generating...') : t('Generate')}
+              {imagePrice !== null && (
+                <span>
+                  ·{' '}
+                  {formatBillingCurrencyFromUSD(imagePrice, {
+                    abbreviate: false,
+                    digitsLarge: 4,
+                    digitsSmall: 4,
+                  })}
+                </span>
+              )}
+            </Button>
+          </CardFooter>
+        </form>
+      </Card>
 
-        <Card className='min-h-[480px]'>
-          <CardHeader>
-            <CardTitle>{t('Output')}</CardTitle>
-            <CardDescription>
-              {t('Your generated media will appear here.')}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className='flex min-h-0 flex-1 items-center justify-center'>
-            {error && (
+      <Card className='min-h-[480px]'>
+        <CardHeader>
+          <CardTitle>{t('Output')}</CardTitle>
+          <CardDescription>
+            {t('Your generated media will appear here.')}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className='flex min-h-0 flex-1 items-center justify-center'>
+          {error && (
+            <Empty className='border border-dashed'>
+              <EmptyHeader>
+                <EmptyTitle>{t('Generation failed')}</EmptyTitle>
+                <EmptyDescription>{error}</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
+          {!error && generation.isPending && (
+            <div className='flex w-full max-w-md flex-col items-center gap-5 text-center'>
+              <div className='bg-muted flex size-12 items-center justify-center rounded-xl'>
+                <Spinner className='size-6' />
+              </div>
+              <div className='flex flex-col gap-1'>
+                <p className='font-medium'>{t('Creating your media')}</p>
+                <p className='text-muted-foreground text-sm'>
+                  {isImage
+                    ? t('Image generation may take a few moments.')
+                    : t('Video generation can take several minutes.')}
+                </p>
+              </div>
+              {!isImage && (
+                <Progress value={generation.video?.progress ?? 0}>
+                  <ProgressLabel>{t('Progress')}</ProgressLabel>
+                  <ProgressValue />
+                </Progress>
+              )}
+            </div>
+          )}
+          {!error &&
+            !generation.isPending &&
+            isImage &&
+            generation.images.length > 0 && (
+              <div className='grid w-full gap-4 sm:grid-cols-2'>
+                {generation.images.map((source, index) => (
+                  <div
+                    key={source}
+                    className='group bg-muted relative overflow-hidden rounded-xl border'
+                  >
+                    <ImagePreviewDialog
+                      source={source}
+                      alt={t('Generated image {{number}}', {
+                        number: index + 1,
+                      })}
+                    />
+                    <Button
+                      variant='secondary'
+                      size='sm'
+                      className='absolute right-3 bottom-3 shadow-sm'
+                      render={
+                        <a
+                          href={source}
+                          download={`generated-image-${index + 1}.png`}
+                        />
+                      }
+                      nativeButton={false}
+                    >
+                      <HugeiconsIcon
+                        icon={Download01Icon}
+                        data-icon='inline-start'
+                      />
+                      {t('Download')}
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          {!error &&
+            !generation.isPending &&
+            !isImage &&
+            videoComplete &&
+            generation.taskId && (
+              <video
+                controls
+                className='max-h-[640px] w-full rounded-xl bg-black'
+                src={getGeneratedVideoContentUrl(generation.taskId)}
+              >
+                {t('Your browser does not support video playback.')}
+              </video>
+            )}
+          {!error &&
+            !generation.isPending &&
+            !(isImage && generation.images.length > 0) &&
+            !(!isImage && videoComplete && generation.taskId) && (
               <Empty className='border border-dashed'>
                 <EmptyHeader>
-                  <EmptyTitle>{t('Generation failed')}</EmptyTitle>
-                  <EmptyDescription>{error}</EmptyDescription>
+                  <EmptyMedia variant='icon'>
+                    <HugeiconsIcon icon={isImage ? Image01Icon : Video01Icon} />
+                  </EmptyMedia>
+                  <EmptyTitle>{t('Ready to create')}</EmptyTitle>
+                  <EmptyDescription>
+                    {t('Enter a prompt and choose your generation settings.')}
+                  </EmptyDescription>
                 </EmptyHeader>
               </Empty>
             )}
-            {!error && generation.isPending && (
-              <div className='flex w-full max-w-md flex-col items-center gap-5 text-center'>
-                <div className='bg-muted flex size-12 items-center justify-center rounded-xl'>
-                  <Spinner className='size-6' />
-                </div>
-                <div className='flex flex-col gap-1'>
-                  <p className='font-medium'>{t('Creating your media')}</p>
-                  <p className='text-muted-foreground text-sm'>
-                    {isImage
-                      ? t('Image generation may take a few moments.')
-                      : t('Video generation can take several minutes.')}
-                  </p>
-                </div>
-                {!isImage && (
-                  <Progress value={generation.video?.progress ?? 0}>
-                    <ProgressLabel>{t('Progress')}</ProgressLabel>
-                    <ProgressValue />
-                  </Progress>
-                )}
-              </div>
-            )}
-            {!error &&
-              !generation.isPending &&
-              isImage &&
-              generation.images.length > 0 && (
-                <div className='grid w-full gap-4 sm:grid-cols-2'>
-                  {generation.images.map((source, index) => (
-                    <div
-                      key={source}
-                      className='group bg-muted relative overflow-hidden rounded-xl border'
-                    >
-                      <Dialog
-                        title={t('Generated image {{number}}', {
-                          number: index + 1,
-                        })}
-                        contentClassName='sm:max-w-[calc(100vw-2rem)]'
-                        contentHeight='calc(100vh - 10rem)'
-                        bodyClassName='overflow-auto'
-                        trigger={
-                          <Button
-                            type='button'
-                            variant='ghost'
-                            className='block h-auto w-full rounded-none p-0'
-                          >
-                            <img
-                              src={source}
-                              alt={t('Generated image {{number}}', {
-                                number: index + 1,
-                              })}
-                              className='aspect-square size-full cursor-zoom-in object-contain'
-                            />
-                          </Button>
-                        }
-                      >
-                        <div className='max-h-full max-w-full overflow-auto'>
-                          <img
-                            src={source}
-                            alt={t('Generated image {{number}}', {
-                              number: index + 1,
-                            })}
-                            className='h-auto max-w-none'
-                          />
-                        </div>
-                      </Dialog>
-                      <Button
-                        variant='secondary'
-                        size='sm'
-                        className='absolute right-3 bottom-3 shadow-sm'
-                        render={
-                          <a
-                            href={source}
-                            download={`generated-image-${index + 1}.png`}
-                          />
-                        }
-                        nativeButton={false}
-                      >
-                        <HugeiconsIcon
-                          icon={Download01Icon}
-                          data-icon='inline-start'
-                        />
-                        {t('Download')}
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            {!error &&
-              !generation.isPending &&
-              !isImage &&
-              videoComplete &&
-              generation.taskId && (
-                <video
-                  controls
-                  className='max-h-[640px] w-full rounded-xl bg-black'
-                  src={getGeneratedVideoContentUrl(generation.taskId)}
-                >
-                  {t('Your browser does not support video playback.')}
-                </video>
-              )}
-            {!error &&
-              !generation.isPending &&
-              !(isImage && generation.images.length > 0) &&
-              !(!isImage && videoComplete && generation.taskId) && (
-                <Empty className='border border-dashed'>
-                  <EmptyHeader>
-                    <EmptyMedia variant='icon'>
-                      <HugeiconsIcon
-                        icon={isImage ? Image01Icon : Video01Icon}
-                      />
-                    </EmptyMedia>
-                    <EmptyTitle>{t('Ready to create')}</EmptyTitle>
-                    <EmptyDescription>
-                      {t('Enter a prompt and choose your generation settings.')}
-                    </EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              )}
-          </CardContent>
-        </Card>
-      </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+
+  return (
+    <div className='min-h-0 flex-1 overflow-y-auto p-4 md:p-6'>
+      {isImage ? (
+        <Tabs defaultValue='playground' className='gap-5'>
+          <TabsList variant='line' aria-label={t('Image workspace')}>
+            <TabsTrigger value='playground'>{t('Playground')}</TabsTrigger>
+            <TabsTrigger value='api'>{t('API')}</TabsTrigger>
+          </TabsList>
+          <TabsContent value='playground'>{playgroundContent}</TabsContent>
+          <TabsContent value='api'>
+            <ImageApiTab
+              model={selectedModel}
+              prompt={form.watch('prompt')}
+              size={selectedSize}
+              count={imageCount}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        playgroundContent
+      )}
     </div>
   )
 }

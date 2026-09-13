@@ -44,6 +44,24 @@ vi.mock('@/features/playground/hooks', () => ({
   useMediaGeneration: () => generation,
 }))
 
+vi.mock('@/hooks/use-status', () => ({
+  useStatus: () => ({
+    status: { server_address: 'https://api.example.test' },
+    loading: false,
+    error: null,
+  }),
+}))
+
+vi.mock('@/components/ai-elements/code-block', () => ({
+  CodeBlock: (props: { code: string; children?: React.ReactNode }) => (
+    <div>
+      <pre data-testid='code-sample'>{props.code}</pre>
+      {props.children}
+    </div>
+  ),
+  CodeBlockCopyButton: () => <button type='button'>Copy code</button>,
+}))
+
 const models = [{ label: 'image-model', value: 'image-model' }]
 const groups = [{ label: 'default', value: 'default', ratio: 1 }]
 const pricingProps = {
@@ -65,6 +83,13 @@ describe('MediaPlayground', () => {
       Size: 'Size',
       Quality: 'Quality',
       'Generated image {{number}}': 'Generated image {{number}}',
+      'Image preview': 'Image preview',
+      'Zoom in': 'Zoom in',
+      'Zoom out': 'Zoom out',
+      'Reset zoom': 'Reset zoom',
+      API: 'API',
+      Playground: 'Playground',
+      'Image generation API': 'Image generation API',
     })
   })
 
@@ -127,7 +152,8 @@ describe('MediaPlayground', () => {
     expect(screen.getByRole('button', { name: 'Generate' })).toBeDisabled()
   })
 
-  test('renders generated images with download links', () => {
+  test('opens generated images with zoom controls and download links', async () => {
+    const user = userEvent.setup()
     generation.images = ['data:image/png;base64,aGVsbG8=']
 
     render(
@@ -149,13 +175,68 @@ describe('MediaPlayground', () => {
       'generated-image-1.png'
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generated image 1' }))
+    await user.click(screen.getByRole('button', { name: 'Generated image 1' }))
 
     const preview = screen.getByRole('dialog')
     expect(preview).toBeVisible()
+    const previewImage = within(preview).getByRole('img', {
+      name: 'Generated image 1',
+    })
+
+    await user.click(within(preview).getByRole('button', { name: 'Zoom in' }))
+    expect(within(preview).getByText('125%')).toBeVisible()
+    expect(previewImage).toHaveStyle({
+      transform: 'translate3d(0px, 0px, 0) scale(1.25)',
+    })
+
+    const viewport = within(preview).getByRole('region', {
+      name: 'Image preview',
+    })
+    viewport.setPointerCapture = vi.fn()
+    viewport.releasePointerCapture = vi.fn()
+    fireEvent.pointerDown(viewport, { pointerId: 1, clientX: 10, clientY: 15 })
+    fireEvent.pointerMove(viewport, { pointerId: 1, clientX: 40, clientY: 35 })
+    fireEvent.pointerUp(viewport, { pointerId: 1 })
+    expect(previewImage).toHaveStyle({
+      transform: 'translate3d(30px, 20px, 0) scale(1.25)',
+    })
+
+    await user.click(
+      within(preview).getByRole('button', { name: 'Reset zoom' })
+    )
+    expect(within(preview).getByText('100%')).toBeVisible()
+  })
+
+  test('shows a live OpenAI-compatible image API example', async () => {
+    const user = userEvent.setup()
+    const model = 'lightx2v/Qwen-Image-2512-Lightning'
+
+    render(
+      <MediaPlayground
+        mode='image'
+        models={[{ label: model, value: model }]}
+        groups={groups}
+        group='default'
+        {...pricingProps}
+        onGroupChange={vi.fn()}
+      />
+    )
+
+    await user.type(
+      screen.getByRole('textbox', { name: 'Prompt' }),
+      'A glass fox'
+    )
+    await user.click(screen.getByRole('combobox', { name: 'Size' }))
+    await user.click(screen.getByRole('option', { name: '1328x1328' }))
+    await user.click(screen.getByRole('tab', { name: 'API' }))
+
+    expect(screen.getByText('Image generation API')).toBeVisible()
     expect(
-      within(preview).getByRole('img', { name: 'Generated image 1' })
-    ).toHaveClass('max-w-none')
+      screen.getByText('POST https://api.example.test/v1/images/generations')
+    ).toBeVisible()
+    expect(screen.getByTestId('code-sample')).toHaveTextContent(model)
+    expect(screen.getByTestId('code-sample')).toHaveTextContent('A glass fox')
+    expect(screen.getByTestId('code-sample')).toHaveTextContent('1328x1328')
   })
 
   test('updates the generated image price from the configured base price', async () => {
