@@ -1,0 +1,66 @@
+name: Publish custom Docker image
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch or commit to build
+        required: true
+        default: feat/media-playground
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out selected revision
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Resolve image tags
+        id: image
+        env:
+          BUILD_REF: ${{ inputs.ref }}
+        run: |
+          REF_TAG=$(printf '%s' "$BUILD_REF" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]+/-/g; s/^[.-]+//; s/[.-]+$//')
+          if [ -z "$REF_TAG" ]; then
+            echo "::error::The selected ref cannot be converted to a valid image tag"
+            exit 1
+          fi
+
+          SHORT_SHA=$(git rev-parse --short=12 HEAD)
+          echo "branch_tag=$REF_TAG" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=$REF_TAG-$SHORT_SHA" >> "$GITHUB_OUTPUT"
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Log in to GHCR
+        uses: docker/login-action@c99871dec2022cc055c062a10cc1a1310835ceb4 # v4.3.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and publish
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          context: .
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: |
+            ghcr.io/frankmanbb/new-api:${{ steps.image.outputs.branch_tag }}
+            ghcr.io/frankmanbb/new-api:${{ steps.image.outputs.sha_tag }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: mode=max
+          sbom: true
